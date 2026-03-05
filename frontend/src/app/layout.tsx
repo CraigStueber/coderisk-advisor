@@ -4,7 +4,7 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "CodeRisk Advisor",
   description:
-    "Multi-agent AI security review for Python code. Powered by LangGraph.",
+    "Multi-agent AI security review for Python - JavaScript - TypeScript code. Powered by LangGraph.",
   icons: {
     icon: "/favicon.svg",
   },
