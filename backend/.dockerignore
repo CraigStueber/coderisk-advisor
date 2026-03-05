@@ -1,0 +1,31 @@
+# Never bake secrets into the image
+.env
+.env.*
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Dev tooling
+.git
+.gitignore
+.venv
+venv/
+*.egg-info/
+dist/
+build/
+
+# Editor
+.vscode/
+.idea/
+
+# Tests (not needed at runtime)
+tests/
+pytest.ini
+.pytest_cache/
+
+# Local docs
+README.md

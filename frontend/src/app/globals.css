@@ -1,0 +1,83 @@
+/* globals.css — CodeRisk Advisor */
+
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap');
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  /* Base */
+  --bg-void:        #080b0f;
+  --bg-surface:     #0d1117;
+  --bg-elevated:    #131920;
+  --bg-panel:       #161d26;
+  --border-subtle:  #1e2a38;
+  --border-default: #243040;
+
+  /* Text */
+  --text-primary:   #e2e8f0;
+  --text-secondary: #7a8fa6;
+  --text-muted:     #4a5a6e;
+  --text-code:      #a8c7fa;
+
+  /* Severity */
+  --critical:       #ff4d4d;
+  --critical-dim:   rgba(255, 77, 77, 0.12);
+  --high:           #ff8c42;
+  --high-dim:       rgba(255, 140, 66, 0.12);
+  --medium:         #f0c040;
+  --medium-dim:     rgba(240, 192, 64, 0.12);
+  --low:            #4da6ff;
+  --low-dim:        rgba(77, 166, 255, 0.12);
+  --info:           #6b7f96;
+  --info-dim:       rgba(107, 127, 150, 0.12);
+
+  /* Agents */
+  --agent-vuln:       #4da6ff;
+  --agent-behavioral: #a78bfa;
+  --agent-skeptic:    #f0c040;
+  --agent-remediation:#34d399;
+  --agent-synthesizer:#94a3b8;
+
+  /* Accent */
+  --accent:         #4da6ff;
+  --accent-dim:     rgba(77, 166, 255, 0.1);
+
+  /* Typography */
+  --font-mono: 'IBM Plex Mono', monospace;
+  --font-sans: 'IBM Plex Sans', sans-serif;
+
+  /* Layout */
+  --panel-left-width: 420px;
+  --header-height: 52px;
+}
+
+html, body {
+  height: 100%;
+  background: var(--bg-void);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-default); border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+/* Selection */
+::selection {
+  background: var(--accent-dim);
+  color: var(--text-primary);
+}
+
+/* Code */
+code, pre {
+  font-family: var(--font-mono);
+}

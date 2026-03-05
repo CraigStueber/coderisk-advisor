@@ -1,0 +1,90 @@
+.bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--bg-elevated);
+  animation: slideDown 0.2s ease;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.agent {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px 3px 7px;
+  border-radius: 3px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-subtle);
+  transition: all 0.2s ease;
+}
+
+.agent.running {
+  border-color: var(--agent-color);
+  background: color-mix(in srgb, var(--agent-color) 8%, var(--bg-panel));
+}
+
+.agent.complete {
+  border-color: color-mix(in srgb, var(--agent-color) 40%, transparent);
+  opacity: 0.7;
+}
+
+.agent.error {
+  border-color: var(--critical);
+  background: var(--critical-dim);
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--agent-color);
+  flex-shrink: 0;
+}
+
+.running .dot {
+  animation: pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.4;
+    transform: scale(0.8);
+  }
+}
+
+.name {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--agent-color);
+  letter-spacing: 0.02em;
+}
+
+.complete .name {
+  color: color-mix(in srgb, var(--agent-color) 60%, var(--text-muted));
+}
+
+.detail {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-muted);
+  padding-left: 4px;
+  border-left: 1px solid var(--border-subtle);
+}

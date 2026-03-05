@@ -1,0 +1,83 @@
+# CodeRisk Advisor — Cloud Run Service Configuration
+# Deploy with:
+#   gcloud run services replace cloudrun.yaml --region us-central1
+#
+# First-time deploy (before this file exists):
+#   gcloud run deploy coderisk-advisor \
+#     --source . \
+#     --region us-central1 \
+#     --allow-unauthenticated
+
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: coderisk-advisor
+  annotations:
+    run.googleapis.com/ingress: all
+spec:
+  template:
+    metadata:
+      annotations:
+        # Scale to zero when idle — cost efficient for portfolio traffic
+        autoscaling.knative.dev/minScale: "0"
+        autoscaling.knative.dev/maxScale: "3"
+
+        # Increase request timeout for LangGraph multi-agent runs
+        # Default is 300s — LangGraph with 4 agents can take 30-60s
+        run.googleapis.com/execution-environment: gen2
+    spec:
+      # One request per instance — LangGraph holds in-memory session state
+      # If you add RedisSaver, bump this to 10-80
+      containerConcurrency: 1
+
+      # Must match your Cloud Run timeout setting in GCP console
+      timeoutSeconds: 120
+
+      containers:
+        - image: gcr.io/YOUR_PROJECT_ID/coderisk-advisor:latest
+          ports:
+            - containerPort: 8080
+          resources:
+            limits:
+              cpu: "1"
+              memory: 512Mi
+          env:
+            # --- LLM Providers ---
+            - name: OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: openai-api-key
+                  key: latest
+
+            - name: ANTHROPIC_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: anthropic-api-key
+                  key: latest
+
+            # --- LangSmith ---
+            - name: LANGSMITH_TRACING
+              value: "true"
+
+            - name: LANGCHAIN_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: langsmith-api-key
+                  key: latest
+
+            - name: LANGCHAIN_PROJECT
+              value: "coderisk-advisor"
+
+            # --- App config ---
+            - name: ALLOWED_ORIGINS
+              value: "https://coderisk.craigstueber.com"
+
+            - name: SESSION_TTL_SECONDS
+              value: "3600"
+
+            # --- Redis (uncomment when adding RedisSaver) ---
+            # - name: REDIS_URL
+            #   valueFrom:
+            #     secretKeyRef:
+            #       name: redis-url
+            #       key: latest
