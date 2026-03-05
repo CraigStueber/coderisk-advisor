@@ -19,7 +19,7 @@ set -e
 # -----------------------------------------------
 # CONFIGURE THESE
 # -----------------------------------------------
-PROJECT_ID="your-gcp-project-id"
+PROJECT_ID="coderisk-advisor"
 REGION="us-central1"
 SERVICE_NAME="coderisk-advisor"
 IMAGE="gcr.io/$PROJECT_ID/$SERVICE_NAME"

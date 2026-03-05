@@ -69,6 +69,13 @@ MODELS = {
 # ---------------------------------------------------------------------------
 
 async def supervisor(state: dict) -> dict:
+    logger.info("[supervisor] flags — vuln=%s behavioral=%s skeptic=%s awaiting=%s findings=%s",
+        state.get("vuln_scan_complete"),
+        state.get("behavioral_scan_complete"),
+        state.get("skeptic_pass_complete"),
+        state.get("awaiting_user_input"),
+        len(state.get("vuln_findings") or []),
+    )
     has_submission = state.get("submission") is not None
     vuln_done = state.get("vuln_scan_complete", False)
     behavioral_done = state.get("behavioral_scan_complete", False)
@@ -108,12 +115,18 @@ def _user_requested_remediation(state: dict) -> bool:
 
 
 def _synthesis_needed(state: dict) -> bool:
-    return bool(
+    scans_ran = (
+        state.get("vuln_scan_complete")
+        and state.get("behavioral_scan_complete")
+        and state.get("skeptic_pass_complete")
+    )
+    has_findings = bool(
         state.get("vuln_findings")
         or state.get("behavioral_findings")
         or state.get("skeptic_assessment")
         or state.get("remediation_items")
-    ) and not state.get("awaiting_user_input", False)
+    )
+    return scans_ran and not state.get("awaiting_user_input", False)
 
 
 # ---------------------------------------------------------------------------

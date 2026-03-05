@@ -34,7 +34,7 @@ spec:
       timeoutSeconds: 120
 
       containers:
-        - image: gcr.io/YOUR_PROJECT_ID/coderisk-advisor:latest
+        - image: gcr.io/coderisk-advisor/coderisk-advisor:latest
           ports:
             - containerPort: 8080
           resources:
@@ -70,7 +70,7 @@ spec:
 
             # --- App config ---
             - name: ALLOWED_ORIGINS
-              value: "https://coderisk.craigstueber.com"
+              value: "https://coderisk.craigstueber.com,http://localhost:3000"
 
             - name: SESSION_TTL_SECONDS
               value: "3600"
