@@ -5,6 +5,9 @@ export const metadata: Metadata = {
   title: "CodeRisk Advisor",
   description:
     "Multi-agent AI security review for Python code. Powered by LangGraph.",
+  icons: {
+    icon: "/favicon.svg",
+  },
 };
 
 export default function RootLayout({
