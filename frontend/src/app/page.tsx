@@ -26,7 +26,6 @@ export default function Home() {
           isAnalyzing={analysis.isAnalyzing}
           onFollowUp={analysis.submitFollowUp}
           sessionId={analysis.sessionId}
-          findings={analysis.findings}
         />
         <FindingsPanel findings={analysis.findings} />
       </main>

@@ -5,8 +5,6 @@ import {
   AgentStatusBar,
   AgentState,
 } from "@/components/AgentStatusBar/AgentStatusBar";
-import { FindingsPanel } from "@/components/FindingsPanel/FindingsPanel";
-import { VulnFinding, BehavioralFinding } from "@/hooks/useAnalysis";
 import styles from "./ChatPanel.module.css";
 
 export interface ChatMessage {
@@ -21,10 +19,6 @@ interface ChatPanelProps {
   isAnalyzing: boolean;
   onFollowUp: (message: string) => void;
   sessionId: string | null;
-  findings: {
-    vuln: VulnFinding[];
-    behavioral: BehavioralFinding[];
-  };
 }
 
 export function ChatPanel({
@@ -33,10 +27,8 @@ export function ChatPanel({
   isAnalyzing,
   onFollowUp,
   sessionId,
-  findings,
 }: ChatPanelProps) {
   const [input, setInput] = useState("");
-  const [findingsExpanded, setFindingsExpanded] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -58,31 +50,10 @@ export function ChatPanel({
   };
 
   const isEmpty = messages.length === 0;
-  const hasFindings =
-    findings.vuln.length > 0 || findings.behavioral.length > 0;
-  const totalFindings = findings.vuln.length + findings.behavioral.length;
 
   return (
     <div className={styles.panel}>
       <AgentStatusBar agents={agentStatuses} />
-
-      {/* Findings panel — collapsible, appears after scan completes */}
-      {hasFindings && (
-        <div className={styles.findingsSection}>
-          <button
-            className={styles.findingsToggle}
-            onClick={() => setFindingsExpanded((v) => !v)}
-          >
-            <span className={styles.findingsToggleLabel}>
-              {totalFindings} finding{totalFindings !== 1 ? "s" : ""}
-            </span>
-            <span className={styles.findingsToggleIcon}>
-              {findingsExpanded ? "▾" : "▸"}
-            </span>
-          </button>
-          {findingsExpanded && <FindingsPanel findings={findings} />}
-        </div>
-      )}
 
       <div className={styles.messages}>
         {isEmpty ? (
