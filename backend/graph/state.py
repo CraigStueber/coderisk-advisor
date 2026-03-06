@@ -96,6 +96,7 @@ class CodeRiskState(TypedDict, total=False):
     remediation_items: list[dict]
     skeptic_assessment: Optional[dict]
     synthesized_response: str
+    final_response: str
     next_agent: Optional[str]
     awaiting_user_input: bool
     analysis_complete: bool

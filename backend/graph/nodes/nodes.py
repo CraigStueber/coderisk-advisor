@@ -6,6 +6,8 @@ containing only the keys it updates. LangGraph merges these into state.
 
 from __future__ import annotations
 
+import asyncio
+import httpx
 import json
 import logging
 from typing import Any
@@ -46,7 +48,7 @@ def _extract_json(text: str) -> str:
 
 
 async def run_vuln_scanner(state: dict) -> dict:
-    from graph.supervisor import MODELS
+    from langchain_openai import ChatOpenAI
     from prompts.vuln_scanner import VULN_SCANNER_SYSTEM_PROMPT
 
     session_id = state.get("session_id", "")
@@ -59,7 +61,12 @@ async def run_vuln_scanner(state: dict) -> dict:
     errors = list(state.get("errors") or [])
 
     try:
-        model = MODELS[AgentRole.VULN_SCANNER]
+        # Fresh instance to avoid connection pool exhaustion
+        model = ChatOpenAI(
+            model="gpt-4.1-mini",
+            temperature=0.0,
+            streaming=False,
+        )
         messages = [
             SystemMessage(content=VULN_SCANNER_SYSTEM_PROMPT),
             HumanMessage(
@@ -250,7 +257,7 @@ async def run_remediation(state: dict) -> dict:
 
 
 async def run_synthesizer(state: dict) -> dict:
-    from graph.supervisor import MODELS
+    from langchain_openai import ChatOpenAI
     from prompts.synthesizer import SYNTHESIZER_SYSTEM_PROMPT, build_synthesis_context
 
     session_id = state.get("session_id", "")
@@ -259,7 +266,19 @@ async def run_synthesizer(state: dict) -> dict:
     errors = list(state.get("errors") or [])
 
     try:
-        model = MODELS[AgentRole.SYNTHESIZER]
+        # Fresh instance with no keepalive to avoid stale Cloud Run connections
+        model = ChatOpenAI(
+            model="gpt-4.1-mini",
+            temperature=0.3,
+            streaming=True,
+            http_async_client=httpx.AsyncClient(
+                timeout=httpx.Timeout(60.0),
+                limits=httpx.Limits(
+                    max_connections=5,
+                    max_keepalive_connections=0,
+                ),
+            ),
+        )
         context = build_synthesis_context(state)
         history = list(state.get("messages") or [])
 
@@ -269,12 +288,29 @@ async def run_synthesizer(state: dict) -> dict:
             HumanMessage(content=f"Current analysis state:\n\n{context}"),
         ]
 
-        response = await model.ainvoke(messages)
-        content = response.content
+        # Retry up to 3 times on connection errors
+        full_response = ""
+        last_exc = None
+        for attempt in range(3):
+            try:
+                full_response = ""
+                async for chunk in model.astream(messages):
+                    if chunk.content:
+                        full_response += chunk.content
+                if full_response:
+                    break
+            except Exception as exc:
+                last_exc = exc
+                logger.warning("[synthesizer] Attempt %d failed: %s", attempt + 1, exc)
+                await asyncio.sleep(1.5 * (attempt + 1))
+
+        if not full_response:
+            raise last_exc or Exception("No response after retries")
 
         return {
-            "synthesized_response": content,
-            "messages": [AIMessage(content=content)],
+            "final_response": full_response,
+            "synthesized_response": full_response,
+            "messages": [AIMessage(content=full_response)],
             "awaiting_user_input": True,
         }
 
@@ -282,6 +318,7 @@ async def run_synthesizer(state: dict) -> dict:
         logger.error("[synthesizer] Error: %s", exc)
         fallback = "I encountered an issue generating a response. The analysis data is still available — ask me a specific question."
         return {
+            "final_response": fallback,
             "synthesized_response": fallback,
             "messages": [AIMessage(content=fallback)],
             "awaiting_user_input": True,

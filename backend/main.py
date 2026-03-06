@@ -172,14 +172,34 @@ async def stream_graph_response(
         ):
             kind = event.get("event")
             name = event.get("name", "")
+            metadata = event.get("metadata") or {}
+            langgraph_node = metadata.get("langgraph_node", "")
             display = node_display.get(name)
+
+            # Temporary debug logging
+            if kind == "on_chat_model_stream":
+                logger.info("[stream] token event — node=%s name=%s", langgraph_node, name)
+            elif kind in ("on_chain_start", "on_chain_end"):
+                logger.info("[stream] chain event — kind=%s name=%s", kind, name)
 
             # Node started
             if kind == "on_chain_start" and display and name not in running_emitted:
                 running_emitted.add(name)
                 yield status_event(display, "running")
 
-            # Node completed
+            # Synthesizer: emit collected response as tokens then complete status
+            elif kind == "on_chain_end" and name == "synthesizer":
+                event_data = event.get("data", {})
+                output = event_data.get("output", {}) if isinstance(event_data, dict) else {}
+                logger.info("[synthesizer] on_chain_end output keys: %s", list(output.keys()) if isinstance(output, dict) else type(output))
+                final_response = output.get("final_response", "") if isinstance(output, dict) else ""
+                logger.info("[synthesizer] final_response length: %s", len(final_response))
+                if final_response:
+                    for char in final_response:
+                        yield token_event(char)
+                yield status_event("Synthesizer", "complete")
+
+            # Node completed (non-synthesizer)
             elif kind == "on_chain_end" and display:
                 detail = ""
                 event_data = event.get("data", {})
@@ -207,18 +227,6 @@ async def stream_graph_response(
                         detail = f"{count} remediation item{'s' if count != 1 else ''}"
 
                 yield status_event(display, "complete", detail)
-
-            # Synthesizer token streaming
-            # LLM tokens come through on_chat_model_stream events
-            elif kind == "on_chat_model_stream":
-                # Only stream tokens from the Synthesizer node
-                tags = event.get("tags") or []
-                metadata = event.get("metadata") or {}
-                langgraph_node = metadata.get("langgraph_node", "")
-                if langgraph_node == "synthesizer":
-                    chunk = event.get("data", {}).get("chunk")
-                    if chunk and hasattr(chunk, "content") and chunk.content:
-                        yield token_event(chunk.content)
 
         # Emit done
         yield done_event(session_id)
