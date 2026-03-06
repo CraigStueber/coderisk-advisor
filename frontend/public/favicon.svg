@@ -4,14 +4,14 @@
 
   <!-- Shield -->
   <path d="M32 10 L48 16 V30 C48 42 40 50 32 54 C24 50 16 42 16 30 V16 Z"
-        fill="#1e293b" stroke="#22c55e" stroke-width="2"/>
+        fill="#1e293b" stroke="#ffffff" stroke-width="2"/>
 
   <!-- Code brackets -->
   <text x="32" y="38"
         font-family="monospace"
         font-size="18"
         text-anchor="middle"
-        fill="#22c55e">
+        fill="#ffffff">
     &lt;/&gt;
   </text>
 </svg>

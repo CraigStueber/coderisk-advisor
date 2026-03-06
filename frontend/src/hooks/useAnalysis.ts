@@ -4,6 +4,33 @@ import { useState, useRef, useCallback } from "react";
 import { ChatMessage } from "@/components/ChatPanel/ChatPanel";
 import { AgentState } from "@/components/AgentStatusBar/AgentStatusBar";
 
+export interface VulnFinding {
+  id: string;
+  title: string;
+  owasp_category: string;
+  severity: "critical" | "high" | "medium" | "low" | "info";
+  cvss_score: number | null;
+  cvss_vector: string | null;
+  confidence: number;
+  location: string;
+  description: string;
+  evidence: string;
+  disputed: boolean;
+  dispute_rationale: string | null;
+}
+
+export interface BehavioralFinding {
+  id: string;
+  risk_type: string;
+  severity: "critical" | "high" | "medium" | "low" | "info";
+  confidence: number;
+  location: string;
+  description: string;
+  llm_specific: boolean;
+  disputed: boolean;
+  dispute_rationale: string | null;
+}
+
 const AGENT_CONFIG: Record<string, { displayName: string; color: string }> = {
   VulnScanner: { displayName: "VulnScanner", color: "var(--agent-vuln)" },
   BehavioralRisk: {
@@ -38,6 +65,10 @@ export function useAnalysis() {
   const [agentStatuses, setAgentStatuses] =
     useState<AgentState[]>(INITIAL_AGENT_STATES);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [findings, setFindings] = useState<{
+    vuln: VulnFinding[];
+    behavioral: BehavioralFinding[];
+  }>({ vuln: [], behavioral: [] });
   const [sessionId, setSessionId] = useState<string | null>(() => {
     if (typeof window !== "undefined") {
       return sessionStorage.getItem("coderisk_session_id");
@@ -73,6 +104,7 @@ export function useAnalysis() {
       setIsAnalyzing(true);
       resetAgentStatuses();
       setMessages([]); // Clear previous conversation
+      setFindings({ vuln: [], behavioral: [] });
 
       // Add user message
       setMessages((prev) => [...prev, { role: "user", content: userMessage }]);
@@ -231,6 +263,17 @@ export function useAnalysis() {
           );
           break;
         }
+        case "findings": {
+          const vuln = data.vuln;
+          const behavioral = data.behavioral;
+          if (Array.isArray(vuln) && Array.isArray(behavioral)) {
+            setFindings({
+              vuln: vuln as VulnFinding[],
+              behavioral: behavioral as BehavioralFinding[],
+            });
+          }
+          break;
+        }
         case "done": {
           // Session ID already captured from response header
           break;
@@ -292,6 +335,7 @@ export function useAnalysis() {
   return {
     messages,
     agentStatuses,
+    findings,
     isAnalyzing,
     sessionId,
     submitCode,

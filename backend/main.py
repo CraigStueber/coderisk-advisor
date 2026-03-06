@@ -122,6 +122,13 @@ def error_event(message: str) -> str:
     return sse_event("error", {"message": message})
 
 
+def findings_event(vuln_findings: list, behavioral_findings: list) -> str:
+    return sse_event("findings", {
+        "vuln": vuln_findings,
+        "behavioral": behavioral_findings,
+    })
+
+
 # ---------------------------------------------------------------------------
 # Graph streaming logic
 # ---------------------------------------------------------------------------
@@ -172,15 +179,7 @@ async def stream_graph_response(
         ):
             kind = event.get("event")
             name = event.get("name", "")
-            metadata = event.get("metadata") or {}
-            langgraph_node = metadata.get("langgraph_node", "")
             display = node_display.get(name)
-
-            # Temporary debug logging
-            if kind == "on_chat_model_stream":
-                logger.info("[stream] token event — node=%s name=%s", langgraph_node, name)
-            elif kind in ("on_chain_start", "on_chain_end"):
-                logger.info("[stream] chain event — kind=%s name=%s", kind, name)
 
             # Node started
             if kind == "on_chain_start" and display and name not in running_emitted:
@@ -191,9 +190,7 @@ async def stream_graph_response(
             elif kind == "on_chain_end" and name == "synthesizer":
                 event_data = event.get("data", {})
                 output = event_data.get("output", {}) if isinstance(event_data, dict) else {}
-                logger.info("[synthesizer] on_chain_end output keys: %s", list(output.keys()) if isinstance(output, dict) else type(output))
                 final_response = output.get("final_response", "") if isinstance(output, dict) else ""
-                logger.info("[synthesizer] final_response length: %s", len(final_response))
                 if final_response:
                     for char in final_response:
                         yield token_event(char)
@@ -207,22 +204,30 @@ async def stream_graph_response(
 
                 if output is not None:
                     if name == "vuln_scanner":
-                        findings = getattr(output, "vuln_findings", []) if hasattr(output, "vuln_findings") else output.get("vuln_findings", []) if isinstance(output, dict) else []
+                        findings = output.get("vuln_findings", []) if isinstance(output, dict) else []
                         count = len(findings)
                         detail = f"{count} finding{'s' if count != 1 else ''}"
 
                     elif name == "behavioral_risk":
-                        findings = getattr(output, "behavioral_findings", []) if hasattr(output, "behavioral_findings") else output.get("behavioral_findings", []) if isinstance(output, dict) else []
+                        findings = output.get("behavioral_findings", []) if isinstance(output, dict) else []
                         count = len(findings)
                         detail = f"{count} behavioral risk{'s' if count != 1 else ''}"
 
                     elif name == "skeptic":
-                        assessment = getattr(output, "skeptic_assessment", None) if hasattr(output, "skeptic_assessment") else output.get("skeptic_assessment") if isinstance(output, dict) else None
-                        disputed = len(assessment.disputed_finding_ids) if assessment and hasattr(assessment, "disputed_finding_ids") else 0
+                        assessment = output.get("skeptic_assessment") if isinstance(output, dict) else None
+                        disputed = len(assessment.get("disputed_finding_ids", [])) if isinstance(assessment, dict) else 0
                         detail = f"{disputed} disputed" if disputed else "no disputes"
 
+                        # Emit findings after skeptic completes — findings are now final
+                        # (skeptic may have updated disputed flags on vuln/behavioral findings)
+                        thread_state = await graph.aget_state(config)
+                        vuln = thread_state.values.get("vuln_findings") or []
+                        behavioral = thread_state.values.get("behavioral_findings") or []
+                        if vuln or behavioral:
+                            yield findings_event(vuln, behavioral)
+
                     elif name == "remediation":
-                        items = getattr(output, "remediation_items", []) if hasattr(output, "remediation_items") else output.get("remediation_items", []) if isinstance(output, dict) else []
+                        items = output.get("remediation_items", []) if isinstance(output, dict) else []
                         count = len(items)
                         detail = f"{count} remediation item{'s' if count != 1 else ''}"
 
