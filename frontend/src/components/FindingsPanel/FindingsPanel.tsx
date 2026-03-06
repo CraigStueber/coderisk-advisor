@@ -1,12 +1,12 @@
 "use client";
 
-import { VulnFinding } from "@/hooks/useAnalysis";
+import { VulnFinding, BehavioralFinding } from "@/hooks/useAnalysis";
 import styles from "./FindingsPanel.module.css";
 
 interface FindingsPanelProps {
   findings: {
     vuln: VulnFinding[];
-    behavioral: any[];
+    behavioral: BehavioralFinding[];
   };
 }
 
@@ -127,7 +127,7 @@ export function FindingsPanel({ findings }: FindingsPanelProps) {
             </span>
           </div>
           <div className={styles.findingsList}>
-            {findings.behavioral.map((f: any) => (
+            {findings.behavioral.map((f: BehavioralFinding) => (
               <div key={f.id} className={styles.findingCard}>
                 <div className={styles.findingHeader}>
                   <span className={styles.findingId}>{f.id}</span>

@@ -79,6 +79,9 @@ export function useAnalysis() {
   // Ref to track the streaming message index
   const streamingIndexRef = useRef<number>(-1);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const handleSSEEventRef = useRef<
+    ((eventType: string, data: Record<string, unknown>) => void) | null
+  >(null);
 
   const resetAgentStatuses = useCallback(() => {
     setAgentStatuses(
@@ -175,7 +178,7 @@ export function useAnalysis() {
               const rawData = line.slice(6);
               try {
                 const data = JSON.parse(rawData);
-                handleSSEEvent(currentEventType, data);
+                handleSSEEventRef.current?.(currentEventType, data);
               } catch {
                 // Partial JSON — wait for more data
               }
@@ -297,6 +300,9 @@ export function useAnalysis() {
     },
     [updateAgentStatus],
   );
+
+  // Keep ref in sync with the latest closure
+  handleSSEEventRef.current = handleSSEEvent;
 
   const submitCode = useCallback(
     (params: {

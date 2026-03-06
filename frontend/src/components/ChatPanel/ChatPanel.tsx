@@ -44,13 +44,6 @@ export function ChatPanel({
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Auto-expand findings when they arrive
-  useEffect(() => {
-    if (findings.vuln.length > 0 || findings.behavioral.length > 0) {
-      setFindingsExpanded(true);
-    }
-  }, [findings]);
-
   const handleSubmit = () => {
     if (!input.trim() || isAnalyzing || !sessionId) return;
     onFollowUp(input.trim());
