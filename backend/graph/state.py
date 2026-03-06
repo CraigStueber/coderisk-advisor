@@ -42,6 +42,8 @@ class VulnerabilityFinding(BaseModel):
     title: str
     owasp_category: str
     severity: Severity
+    cvss_score: Optional[float] = Field(default=None, ge=0.0, le=10.0)
+    cvss_vector: Optional[str] = None
     confidence: float = Field(..., ge=0.0, le=1.0)
     location: str
     description: str
