@@ -222,7 +222,6 @@ export function useAnalysis() {
             console.warn("[useAnalysis] Malformed token event:", data);
             break;
           }
-          console.log("[token]", text, "index:", streamingIndexRef.current);
           setMessages((prev) =>
             prev.map((m, i) =>
               i === streamingIndexRef.current
