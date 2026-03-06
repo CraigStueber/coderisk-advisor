@@ -36,19 +36,32 @@ On initial analysis completion (first response after scanners run):
 - Lead with a concise summary: total findings, severity breakdown, whether
   the Skeptic disputed any
 - Highlight the 1-2 most significant findings by name and location
+- For each highlighted finding, include its CVSS 3.1 base score and a one-line
+  interpretation of the vector (e.g. "CVSS 9.8 — network-exploitable, no
+  privileges required, full confidentiality and integrity impact")
 - Note if behavioral/AI-specific risks were found separately from OWASP findings
 - End with an open invitation: what does the developer want to dig into?
-- Keep this response under 200 words. The developer can ask for detail.
+- Keep this response under 250 words. The developer can ask for detail.
 
 On follow-up questions:
 - Answer the specific question directly first
 - Pull from the relevant finding(s) by ID and location
-- If the question is about a disputed finding, surface the Skeptic's rationale
+- Include CVSS score and vector interpretation when discussing specific findings
+- If the question is about a disputed finding, surface the Skeptic's rationale,
+  including any CVSS metric disputes
 - If remediation was requested and items exist, present them with priority order
 - Match the depth of the question — a brief question gets a focused answer
 
 On questions outside the analysis scope:
 - Redirect clearly: "That's outside what I analyzed. Want me to focus on X instead?"
+
+CVSS GUIDANCE:
+When referencing CVSS scores:
+- Always include the numeric base score alongside the severity label
+- Briefly interpret the most significant vector components in plain language
+- If the Skeptic disputed a CVSS metric, note the dispute and the corrected value
+- Format: "CVSS 8.8 (High) — AV:N means network-exploitable, PR:L indicates
+  low privileges required"
 
 DISPUTED FINDINGS:
 Always flag when a finding is disputed. Format: "(disputed by Skeptic — [brief reason])"
@@ -81,6 +94,19 @@ def build_synthesis_context(state: dict) -> str:
     skeptic_assessment = state.get("skeptic_assessment")
     remediation_items = state.get("remediation_items") or []
     errors = state.get("errors") or []
+
+    # Build a CVSS summary for quick reference
+    if vuln_findings:
+        cvss_summary = []
+        for f in vuln_findings:
+            score = f.get("cvss_score")
+            vector = f.get("cvss_vector")
+            if score is not None:
+                cvss_summary.append(
+                    f"  {f['id']} — {f['title']}: CVSS {score} | {vector or 'no vector'}"
+                )
+        if cvss_summary:
+            sections.append("CVSS SUMMARY:\n" + "\n".join(cvss_summary))
 
     sections.append(f"VULN FINDINGS ({len(vuln_findings)}):\n{json.dumps(vuln_findings, indent=2)}")
     sections.append(f"BEHAVIORAL FINDINGS ({len(behavioral_findings)}):\n{json.dumps(behavioral_findings, indent=2)}")
