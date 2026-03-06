@@ -91,7 +91,7 @@ async def run_vuln_scanner(state: dict) -> dict:
 
 
 async def run_behavioral_risk(state: dict) -> dict:
-    from graph.supervisor import MODELS
+    from langchain_anthropic import ChatAnthropic
     from prompts.behavioral_risk import (
         BEHAVIORAL_RISK_SYSTEM_PROMPT,
         BEHAVIORAL_RISK_AI_GENERATED_ADDENDUM,
@@ -107,7 +107,15 @@ async def run_behavioral_risk(state: dict) -> dict:
     errors = list(state.get("errors") or [])
 
     try:
-        model = MODELS[AgentRole.BEHAVIORAL_RISK]
+        model = ChatAnthropic(
+            model="claude-sonnet-4-5",
+            temperature=0.2,
+            max_tokens=4096,
+            http_client=httpx.Client(
+                timeout=httpx.Timeout(60.0),
+                limits=httpx.Limits(max_keepalive_connections=0),
+            ),
+        )
         system = BEHAVIORAL_RISK_SYSTEM_PROMPT
         if submission.get("flagged_as_ai_generated"):
             system += "\n\n" + BEHAVIORAL_RISK_AI_GENERATED_ADDENDUM
@@ -145,7 +153,7 @@ async def run_behavioral_risk(state: dict) -> dict:
 
 
 async def run_skeptic(state: dict) -> dict:
-    from graph.supervisor import MODELS
+    from langchain_anthropic import ChatAnthropic
     from prompts.skeptic import SKEPTIC_SYSTEM_PROMPT
 
     session_id = state.get("session_id", "")
@@ -162,7 +170,15 @@ async def run_skeptic(state: dict) -> dict:
     submission = state.get("submission", {})
 
     try:
-        model = MODELS[AgentRole.SKEPTIC]
+        model = ChatAnthropic(
+            model="claude-sonnet-4-5",
+            temperature=0.3,
+            max_tokens=4096,
+            http_client=httpx.Client(
+                timeout=httpx.Timeout(60.0),
+                limits=httpx.Limits(max_keepalive_connections=0),
+            ),
+        )
         messages = [
             SystemMessage(content=SKEPTIC_SYSTEM_PROMPT),
             HumanMessage(
