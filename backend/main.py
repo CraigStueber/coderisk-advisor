@@ -122,11 +122,18 @@ def error_event(message: str) -> str:
     return sse_event("error", {"message": message})
 
 
-def findings_event(vuln_findings: list, behavioral_findings: list) -> str:
-    return sse_event("findings", {
+def findings_event(
+    vuln_findings: list,
+    behavioral_findings: list,
+    behavioral_signals: dict | None = None,
+) -> str:
+    payload: dict = {
         "vuln": vuln_findings,
         "behavioral": behavioral_findings,
-    })
+    }
+    if behavioral_signals is not None:
+        payload["signals"] = behavioral_signals
+    return sse_event("findings", payload)
 
 
 # ---------------------------------------------------------------------------
@@ -223,8 +230,9 @@ async def stream_graph_response(
                         thread_state = await graph.aget_state(config)
                         vuln = thread_state.values.get("vuln_findings") or []
                         behavioral = thread_state.values.get("behavioral_findings") or []
+                        signals = thread_state.values.get("behavioral_signals")
                         if vuln or behavioral:
-                            yield findings_event(vuln, behavioral)
+                            yield findings_event(vuln, behavioral, signals)
 
                     elif name == "remediation":
                         items = output.get("remediation_items", []) if isinstance(output, dict) else []

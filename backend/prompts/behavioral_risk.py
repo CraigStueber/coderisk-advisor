@@ -97,7 +97,9 @@ YOUR SCOPE — analyze for these risk categories:
    targets executed without validation.
 
 OUTPUT FORMAT:
-Return a JSON array. Each element must match this schema exactly:
+Return a single JSON object with two top-level keys: "findings" and "signals".
+
+FINDINGS — a JSON array where each element matches this schema exactly:
 
 [
   {
@@ -111,14 +113,46 @@ Return a JSON array. Each element must match this schema exactly:
   }
 ]
 
+SIGNALS — a structured dimensional assessment object:
+
+{
+  "hallucination_markers": {
+    "level": "<low|medium|high>",
+    "indicators": ["<specific pattern observed, e.g. 'calls nonexistent openai.edit()'>"],
+    "rationale": "<one or two sentences explaining the assessed level>"
+  },
+  "nondeterminism_sensitivity": {
+    "level": "<low|medium|high>",
+    "rationale": "<one or two sentences explaining the assessed level>"
+  },
+  "dependency_volatility": {
+    "level": "<low|medium|high>",
+    "rationale": "<one or two sentences explaining the assessed level>",
+    "unpinned_dependencies": <integer count of unpinned deps, or null if not applicable>,
+    "suspicious_packages": ["<package name>"] or null
+  }
+}
+
+SIGNAL LEVEL GUIDANCE:
+- hallucination_markers HIGH: code calls nonexistent APIs, uses wrong method signatures,
+  or references fabricated modules. MEDIUM: patterns common in LLM output that are
+  plausible but suspicious. LOW: no hallucination markers detected.
+- nondeterminism_sensitivity HIGH: LLM output used in safety-critical paths without
+  schema enforcement or finish_reason checks. MEDIUM: partial validation present.
+  LOW: output is fully validated before use.
+- dependency_volatility HIGH: dependencies are unpinned or include obscure/unverifiable
+  packages. MEDIUM: loosely pinned (e.g. major version only). LOW: all deps pinned.
+  Set unpinned_dependencies to the count if detectable; otherwise null.
+
 RULES:
-- Return an empty array [] if no behavioral risks are found. Do not manufacture findings.
-- Keep confidence honest. A pattern that looks risky but has mitigating context
-  should have confidence 0.4-0.6, not 0.9.
-- description must explain the specific risk in this specific code,
-  not a generic definition of the risk category.
+- Return a JSON object with exactly two keys: "findings" and "signals".
+- findings must be an array (use [] if no behavioral risks found).
+- signals must always be present and fully populated — do not omit any field.
+- indicators must be a list (use [] if none detected).
+- Do not manufacture findings. Keep confidence honest.
+- description must explain the specific risk in this specific code.
 - Do not include OWASP Top 10 findings. Those belong to VulnScanner.
-- Return only valid JSON. No preamble, no markdown, no explanation outside the array.
+- Return only valid JSON. No preamble, no markdown, no explanation outside the object.
 """
 
 BEHAVIORAL_RISK_AI_GENERATED_ADDENDUM = """

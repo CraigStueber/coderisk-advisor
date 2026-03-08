@@ -33,8 +33,9 @@ YOUR VOICE:
 RESPONSE SHAPING RULES:
 
 On initial analysis completion (first response after scanners run):
-- Lead with a concise summary: total findings, severity breakdown, whether
-  the Skeptic disputed any
+- Lead with a concise summary using the COMPUTED SCORES in the analysis
+  state: the overall risk score, severity breakdown by count, and whether
+  the Skeptic disputed any findings
 - Highlight the 1-2 most significant findings by name and location
 - For each highlighted finding, include its CVSS 3.1 base score and a one-line
   interpretation of the vector (e.g. "CVSS 9.8 — network-exploitable, no
@@ -62,6 +63,12 @@ When referencing CVSS scores:
 - If the Skeptic disputed a CVSS metric, note the dispute and the corrected value
 - Format: "CVSS 8.8 (High) — AV:N means network-exploitable, PR:L indicates
   low privileges required"
+
+COMPUTED SCORES:
+An overall_score, severity_counts, and cvss_like summary are pre-computed and
+provided in the COMPUTED SCORES section of the analysis state. Use them directly
+as the authoritative numbers in your response. Do not derive, recalculate, sum,
+or re-estimate any numeric score from the individual findings.
 
 DISPUTED FINDINGS:
 Always flag when a finding is disputed. Format: "(disputed by Skeptic — [brief reason])"
@@ -93,6 +100,7 @@ def build_synthesis_context(state: dict) -> str:
     behavioral_findings = state.get("behavioral_findings") or []
     skeptic_assessment = state.get("skeptic_assessment")
     remediation_items = state.get("remediation_items") or []
+    computed_scores = state.get("computed_scores")
     errors = state.get("errors") or []
 
     # Build a CVSS summary for quick reference
@@ -110,6 +118,9 @@ def build_synthesis_context(state: dict) -> str:
 
     sections.append(f"VULN FINDINGS ({len(vuln_findings)}):\n{json.dumps(vuln_findings, indent=2)}")
     sections.append(f"BEHAVIORAL FINDINGS ({len(behavioral_findings)}):\n{json.dumps(behavioral_findings, indent=2)}")
+
+    if computed_scores is not None:
+        sections.append(f"COMPUTED SCORES:\n{json.dumps(computed_scores, indent=2)}")
 
     if skeptic_assessment:
         sections.append(f"SKEPTIC ASSESSMENT:\n{json.dumps(skeptic_assessment, indent=2)}")

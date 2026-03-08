@@ -17,6 +17,7 @@ from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from graph.state import (
     AgentRole,
     BehavioralRiskFinding,
+    BehavioralSignals,
     RemediationItem,
     SkepticAssessment,
     VulnerabilityFinding,
@@ -130,9 +131,25 @@ async def run_behavioral_risk(state: dict) -> dict:
         response = await model.ainvoke(messages)
         content = response.content
         logger.info("[behavioral_risk] Raw response: %s", content)
-        findings_data: list[dict] = json.loads(_extract_json(content))
+        parsed = json.loads(_extract_json(content))
+        if isinstance(parsed, list):
+            findings_data: list[dict] = parsed
+            signals_data: dict = {}
+        else:
+            findings_data = parsed.get("findings", [])
+            signals_data = parsed.get("signals", {})
         validated = [BehavioralRiskFinding(**f).model_dump() for f in findings_data]
-        return {"behavioral_findings": validated, "behavioral_scan_complete": True}
+        validated_signals = None
+        if signals_data:
+            try:
+                validated_signals = BehavioralSignals(**signals_data).model_dump()
+            except Exception as sig_exc:
+                logger.warning("[behavioral_risk] Signals validation failed: %s", sig_exc)
+        return {
+            "behavioral_findings": validated,
+            "behavioral_signals": validated_signals,
+            "behavioral_scan_complete": True,
+        }
 
     except Exception as exc:
         logger.error("[behavioral_risk] Error: %s", exc)
@@ -206,6 +223,22 @@ async def run_skeptic(state: dict) -> dict:
             "skeptic_pass_complete": True,
             "errors": _append_error(errors, AgentRole.SKEPTIC, exc),
         }
+
+
+def run_score_calculator(state: dict) -> dict:
+    from utils.score_calculator import calculate_scores
+
+    vuln_findings = state.get("vuln_findings") or []
+    behavioral_findings = state.get("behavioral_findings") or []
+    all_findings = vuln_findings + behavioral_findings
+
+    scores = calculate_scores(all_findings)
+    logger.info(
+        "[score_calculator] overall=%.1f counts=%s",
+        scores["overall_score"],
+        scores["severity_counts"],
+    )
+    return {"computed_scores": scores}
 
 
 async def run_remediation(state: dict) -> dict:

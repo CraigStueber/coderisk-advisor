@@ -16,6 +16,7 @@ from graph.nodes.nodes import (
     run_vuln_scanner,
     run_behavioral_risk,
     run_skeptic,
+    run_score_calculator,
     run_remediation,
     run_synthesizer,
 )
@@ -168,6 +169,7 @@ def build_graph() -> StateGraph:
     builder.add_node("vuln_scanner", run_vuln_scanner)
     builder.add_node("behavioral_risk", run_behavioral_risk)
     builder.add_node("skeptic", run_skeptic)
+    builder.add_node("score_calculator", run_score_calculator)
     builder.add_node("remediation", run_remediation)
     builder.add_node("synthesizer", run_synthesizer)
 
@@ -189,7 +191,8 @@ def build_graph() -> StateGraph:
     # Sequential — vuln runs first, then behavioral, then back to supervisor
     builder.add_edge("vuln_scanner", "behavioral_risk")
     builder.add_edge("behavioral_risk", "supervisor")
-    builder.add_edge("skeptic", "supervisor")
+    builder.add_edge("skeptic", "score_calculator")
+    builder.add_edge("score_calculator", "supervisor")
     builder.add_edge("remediation", "supervisor")
     builder.add_edge("synthesizer", END)
 

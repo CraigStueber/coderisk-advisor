@@ -81,6 +81,36 @@ class SkepticAssessment(BaseModel):
     notes: str
 
 
+class SignalLevel(str, Enum):
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+
+
+class HallucinationMarkersSignal(BaseModel):
+    level: SignalLevel
+    indicators: list[str]
+    rationale: str
+
+
+class NondeterminismSensitivitySignal(BaseModel):
+    level: SignalLevel
+    rationale: str
+
+
+class DependencyVolatilitySignal(BaseModel):
+    level: SignalLevel
+    rationale: str
+    unpinned_dependencies: Optional[int] = None
+    suspicious_packages: Optional[list[str]] = None
+
+
+class BehavioralSignals(BaseModel):
+    hallucination_markers: HallucinationMarkersSignal
+    nondeterminism_sensitivity: NondeterminismSensitivitySignal
+    dependency_volatility: DependencyVolatilitySignal
+
+
 class CodeSubmission(BaseModel):
     raw_code: str
     filename: Optional[str] = None
@@ -97,6 +127,8 @@ class CodeRiskState(TypedDict, total=False):
     behavioral_findings: list[dict]
     remediation_items: list[dict]
     skeptic_assessment: Optional[dict]
+    behavioral_signals: Optional[dict]
+    computed_scores: Optional[dict]
     synthesized_response: str
     final_response: str
     next_agent: Optional[str]

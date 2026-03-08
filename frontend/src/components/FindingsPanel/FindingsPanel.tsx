@@ -1,12 +1,17 @@
 "use client";
 
-import { VulnFinding, BehavioralFinding } from "@/hooks/useAnalysis";
+import {
+  VulnFinding,
+  BehavioralFinding,
+  BehavioralSignals,
+} from "@/hooks/useAnalysis";
 import styles from "./FindingsPanel.module.css";
 
 interface FindingsPanelProps {
   findings: {
     vuln: VulnFinding[];
     behavioral: BehavioralFinding[];
+    signals: BehavioralSignals | null;
   };
 }
 
@@ -96,11 +101,97 @@ function FindingCard({ finding }: { finding: VulnFinding }) {
   );
 }
 
-export function FindingsPanel({ findings }: FindingsPanelProps) {
-  const hasFindings =
-    findings.vuln.length > 0 || findings.behavioral.length > 0;
+const SIGNAL_LEVEL_COLORS: Record<string, string> = {
+  low: "var(--severity-info, #888888)",
+  medium: "var(--severity-medium, #ffcc00)",
+  high: "var(--severity-high, #ff8800)",
+};
 
-  if (!hasFindings) return null;
+function SignalLevelBadge({ level }: { level: string }) {
+  const color = SIGNAL_LEVEL_COLORS[level] ?? "#888888";
+  return (
+    <span
+      className={styles.signalLevelBadge}
+      style={{ color, borderColor: `${color}40` }}
+    >
+      {level.toUpperCase()}
+    </span>
+  );
+}
+
+function BehavioralSignalsSection({ signals }: { signals: BehavioralSignals }) {
+  return (
+    <div className={styles.section}>
+      <div className={styles.sectionHeader}>
+        <span className={styles.sectionTitle}>Behavioral Signals</span>
+      </div>
+      <div className={styles.signalsList}>
+        <div className={styles.signalRow}>
+          <div className={styles.signalHeader}>
+            <span className={styles.signalLabel}>Hallucination Markers</span>
+            <SignalLevelBadge level={signals.hallucination_markers.level} />
+          </div>
+          <div className={styles.signalRationale}>
+            {signals.hallucination_markers.rationale}
+          </div>
+          {signals.hallucination_markers.indicators.length > 0 && (
+            <ul className={styles.tagList}>
+              {signals.hallucination_markers.indicators.map((ind, i) => (
+                <li key={i} className={styles.tagItem}>
+                  {ind}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        <div className={styles.signalRow}>
+          <div className={styles.signalHeader}>
+            <span className={styles.signalLabel}>
+              Nondeterminism Sensitivity
+            </span>
+            <SignalLevelBadge
+              level={signals.nondeterminism_sensitivity.level}
+            />
+          </div>
+          <div className={styles.signalRationale}>
+            {signals.nondeterminism_sensitivity.rationale}
+          </div>
+        </div>
+
+        <div className={styles.signalRow}>
+          <div className={styles.signalHeader}>
+            <span className={styles.signalLabel}>Dependency Volatility</span>
+            <SignalLevelBadge level={signals.dependency_volatility.level} />
+          </div>
+          <div className={styles.signalRationale}>
+            {signals.dependency_volatility.rationale}
+          </div>
+          {signals.dependency_volatility.suspicious_packages &&
+            signals.dependency_volatility.suspicious_packages.length > 0 && (
+              <ul className={styles.tagList}>
+                {signals.dependency_volatility.suspicious_packages.map(
+                  (pkg, i) => (
+                    <li key={i} className={styles.tagItem}>
+                      {pkg}
+                    </li>
+                  ),
+                )}
+              </ul>
+            )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function FindingsPanel({ findings }: FindingsPanelProps) {
+  const hasContent =
+    findings.vuln.length > 0 ||
+    findings.behavioral.length > 0 ||
+    findings.signals != null;
+
+  if (!hasContent) return null;
 
   return (
     <div className={styles.panel}>
@@ -147,6 +238,10 @@ export function FindingsPanel({ findings }: FindingsPanelProps) {
             ))}
           </div>
         </div>
+      )}
+
+      {findings.signals && (
+        <BehavioralSignalsSection signals={findings.signals} />
       )}
     </div>
   );

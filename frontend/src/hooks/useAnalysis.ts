@@ -31,6 +31,24 @@ export interface BehavioralFinding {
   dispute_rationale: string | null;
 }
 
+export interface BehavioralSignals {
+  hallucination_markers: {
+    level: "low" | "medium" | "high";
+    indicators: string[];
+    rationale: string;
+  };
+  nondeterminism_sensitivity: {
+    level: "low" | "medium" | "high";
+    rationale: string;
+  };
+  dependency_volatility: {
+    level: "low" | "medium" | "high";
+    rationale: string;
+    unpinned_dependencies: number | null;
+    suspicious_packages: string[] | null;
+  };
+}
+
 const AGENT_CONFIG: Record<string, { displayName: string; color: string }> = {
   VulnScanner: { displayName: "VulnScanner", color: "var(--agent-vuln)" },
   BehavioralRisk: {
@@ -68,7 +86,8 @@ export function useAnalysis() {
   const [findings, setFindings] = useState<{
     vuln: VulnFinding[];
     behavioral: BehavioralFinding[];
-  }>({ vuln: [], behavioral: [] });
+    signals: BehavioralSignals | null;
+  }>({ vuln: [], behavioral: [], signals: null });
   const [sessionId, setSessionId] = useState<string | null>(() => {
     if (typeof window !== "undefined") {
       return sessionStorage.getItem("coderisk_session_id");
@@ -107,7 +126,7 @@ export function useAnalysis() {
       setIsAnalyzing(true);
       resetAgentStatuses();
       setMessages([]); // Clear previous conversation
-      setFindings({ vuln: [], behavioral: [] });
+      setFindings({ vuln: [], behavioral: [], signals: null });
 
       // Add user message
       setMessages((prev) => [...prev, { role: "user", content: userMessage }]);
@@ -273,6 +292,7 @@ export function useAnalysis() {
             setFindings({
               vuln: vuln as VulnFinding[],
               behavioral: behavioral as BehavioralFinding[],
+              signals: (data.signals as BehavioralSignals) ?? null,
             });
           }
           break;

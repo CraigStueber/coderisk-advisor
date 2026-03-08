@@ -138,3 +138,74 @@
   color: rgba(255, 255, 255, 0.2);
   margin-left: 2px;
 }
+
+/* Behavioral Signals */
+
+.signalsList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.signalRow {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 6px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.signalHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.signalLabel {
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.6);
+  flex: 1;
+}
+
+.signalLevelBadge {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  padding: 2px 6px;
+  border-radius: 3px;
+  border: 1px solid;
+  background: transparent;
+}
+
+.signalRationale {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.45);
+  line-height: 1.5;
+}
+
+.tagList {
+  list-style: none;
+  padding: 0;
+  margin: 3px 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.tagItem {
+  font-size: 10px;
+  font-family: monospace;
+  color: rgba(255, 255, 255, 0.3);
+  padding-left: 10px;
+  position: relative;
+}
+
+.tagItem::before {
+  content: "›";
+  position: absolute;
+  left: 0;
+  color: rgba(255, 255, 255, 0.2);
+}
