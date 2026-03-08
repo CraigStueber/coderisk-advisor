@@ -5,6 +5,8 @@
   padding: 12px;
   overflow-y: auto;
   height: 100%;
+  max-width: 30%;
+  flex-shrink: 0;
 }
 
 .section {

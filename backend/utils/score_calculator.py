@@ -23,6 +23,10 @@ Overall:
 
 from __future__ import annotations
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 # ---------------------------------------------------------------------------
 # Severity → numeric weight tables
 # ---------------------------------------------------------------------------
@@ -87,14 +91,17 @@ def _get_exploitability(finding: dict) -> float:
 
 
 def _get_confidence(finding: dict) -> float:
-    """Return confidence clamped to [0, 1]. Missing field → 0."""
+    """Return confidence clamped to [0, 1].
+    Missing field defaults to 0.7 — VulnScanner findings don't emit confidence;
+    BehavioralRisk findings always include it.
+    """
     raw = finding.get("confidence")
     if raw is None:
-        return 0.0
+        return 0.7
     try:
         return max(0.0, min(1.0, float(raw)))
     except (ValueError, TypeError):
-        return 0.0
+        return 0.7
 
 
 def _category_key(finding: dict) -> str:
@@ -150,6 +157,13 @@ def calculate_scores(findings: list[dict]) -> dict:
 
         base_score = (impact * exploitability) / 10.0
         rule_score = base_score * confidence
+
+        logger.info(
+            "[score_calculator] finding=%s confidence=%s rule_score=%s",
+            finding.get("id"),
+            confidence,
+            rule_score,
+        )
 
         cat = _category_key(finding)
         if cat not in category_scores or rule_score > category_scores[cat]:

@@ -200,12 +200,14 @@ async def run_skeptic(state: dict) -> dict:
         disputed_ids = set(assessment.disputed_finding_ids)
 
         updated_vuln = [
-            {**f, "disputed": True, "dispute_rationale": "Flagged by Skeptic"}
+            {**f, "disputed": True, "dispute_rationale": "Flagged by Skeptic",
+             "confidence": f.get("confidence", 0.7) * 0.4}
             if f["id"] in disputed_ids else f
             for f in vuln_findings
         ]
         updated_behavioral = [
-            {**f, "disputed": True, "dispute_rationale": "Flagged by Skeptic"}
+            {**f, "disputed": True, "dispute_rationale": "Flagged by Skeptic",
+             "confidence": f.get("confidence", 0.7) * 0.4}
             if f["id"] in disputed_ids else f
             for f in behavioral_findings
         ]
