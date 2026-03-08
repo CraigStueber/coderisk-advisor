@@ -91,7 +91,7 @@ async def run_vuln_scanner(state: dict) -> dict:
 
 
 async def run_behavioral_risk(state: dict) -> dict:
-    from langchain_anthropic import ChatAnthropic
+    from langchain_openai import ChatOpenAI
     from prompts.behavioral_risk import (
         BEHAVIORAL_RISK_SYSTEM_PROMPT,
         BEHAVIORAL_RISK_AI_GENERATED_ADDENDUM,
@@ -107,14 +107,9 @@ async def run_behavioral_risk(state: dict) -> dict:
     errors = list(state.get("errors") or [])
 
     try:
-        model = ChatAnthropic(
-            model="claude-sonnet-4-5",
+        model = ChatOpenAI(
+            model="gpt-5.4",
             temperature=0.2,
-            max_tokens=4096,
-            http_client=httpx.Client(
-                timeout=httpx.Timeout(60.0),
-                limits=httpx.Limits(max_keepalive_connections=0),
-            ),
         )
         system = BEHAVIORAL_RISK_SYSTEM_PROMPT
         if submission.get("flagged_as_ai_generated"):
@@ -131,14 +126,9 @@ async def run_behavioral_risk(state: dict) -> dict:
                 )
             ),
         ]
+
         response = await model.ainvoke(messages)
-        # Handle both string and list content blocks (Anthropic returns list)
         content = response.content
-        if isinstance(content, list):
-            content = "".join(
-                block.get("text", "") if isinstance(block, dict) else getattr(block, "text", "")
-                for block in content
-            )
         logger.info("[behavioral_risk] Raw response: %s", content)
         findings_data: list[dict] = json.loads(_extract_json(content))
         validated = [BehavioralRiskFinding(**f).model_dump() for f in findings_data]
@@ -153,7 +143,7 @@ async def run_behavioral_risk(state: dict) -> dict:
 
 
 async def run_skeptic(state: dict) -> dict:
-    from langchain_anthropic import ChatAnthropic
+    from langchain_openai import ChatOpenAI
     from prompts.skeptic import SKEPTIC_SYSTEM_PROMPT
 
     session_id = state.get("session_id", "")
@@ -170,14 +160,9 @@ async def run_skeptic(state: dict) -> dict:
     submission = state.get("submission", {})
 
     try:
-        model = ChatAnthropic(
-            model="claude-sonnet-4-5",
+        model = ChatOpenAI(
+            model="gpt-5.4",
             temperature=0.3,
-            max_tokens=4096,
-            http_client=httpx.Client(
-                timeout=httpx.Timeout(60.0),
-                limits=httpx.Limits(max_keepalive_connections=0),
-            ),
         )
         messages = [
             SystemMessage(content=SKEPTIC_SYSTEM_PROMPT),
@@ -188,14 +173,9 @@ async def run_skeptic(state: dict) -> dict:
                 )
             ),
         ]
+
         response = await model.ainvoke(messages)
-        # Handle both string and list content blocks (Anthropic returns list)
         content = response.content
-        if isinstance(content, list):
-            content = "".join(
-                block.get("text", "") if isinstance(block, dict) else getattr(block, "text", "")
-                for block in content
-            )
         logger.info("[skeptic] Raw response: %s", content)
         assessment_data: dict = json.loads(_extract_json(content))
         assessment = SkepticAssessment(**assessment_data)

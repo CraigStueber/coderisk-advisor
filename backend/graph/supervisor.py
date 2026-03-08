@@ -8,7 +8,6 @@ from typing import Literal
 
 from langchain_core.messages import HumanMessage
 from langchain_openai import ChatOpenAI
-from langchain_anthropic import ChatAnthropic
 from langgraph.graph import END, START, StateGraph
 from langgraph.checkpoint.memory import MemorySaver
 
@@ -39,16 +38,14 @@ MODELS = {
         temperature=0.0,
         streaming=False,
     ),
-    AgentRole.BEHAVIORAL_RISK: ChatAnthropic(
-        model="claude-sonnet-4-5",
+    AgentRole.BEHAVIORAL_RISK: ChatOpenAI(
+        model="gpt-5.4",
         temperature=0.2,
-        max_tokens=4096,
         streaming=True,
     ),
-    AgentRole.SKEPTIC: ChatAnthropic(
-        model="claude-sonnet-4-5",
+    AgentRole.SKEPTIC: ChatOpenAI(
+        model="gpt-5.4",
         temperature=0.3,
-        max_tokens=4096,
         streaming=True,
     ),
     AgentRole.REMEDIATION: ChatOpenAI(

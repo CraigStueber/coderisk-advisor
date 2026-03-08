@@ -28,8 +28,10 @@
 }
 
 .logoMark {
-  color: var(--accent);
-  font-size: 11px;
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  border-radius: 5px;
 }
 
 .badge {

@@ -5,6 +5,8 @@ import { CodePanel } from "@/components/CodePanel/CodePanel";
 import { ChatPanel } from "@/components/ChatPanel/ChatPanel";
 import { FindingsPanel } from "@/components/FindingsPanel/FindingsPanel";
 import { useAnalysis } from "@/hooks/useAnalysis";
+import { MobileGate } from "@/components/MobileGate/MobileGate";
+
 import styles from "./page.module.css";
 import "./globals.css";
 
@@ -13,6 +15,7 @@ export default function Home() {
   //Adding a comment to trigger a change for deployment testing
   return (
     <div className={styles.root}>
+      <MobileGate />
       <Header />
       <main className={styles.workspace}>
         <CodePanel
