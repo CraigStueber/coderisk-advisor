@@ -31,22 +31,29 @@ export interface BehavioralFinding {
   dispute_rationale: string | null;
 }
 
+interface SignalDimension {
+  level: "low" | "medium" | "high";
+  rationale: string;
+}
+
 export interface BehavioralSignals {
-  hallucination_markers: {
-    level: "low" | "medium" | "high";
-    indicators: string[];
-    rationale: string;
-  };
-  nondeterminism_sensitivity: {
-    level: "low" | "medium" | "high";
-    rationale: string;
-  };
-  dependency_volatility: {
-    level: "low" | "medium" | "high";
-    rationale: string;
+  hallucination_markers: SignalDimension & { indicators: string[] };
+  nondeterminism_sensitivity: SignalDimension;
+  dependency_volatility: SignalDimension & {
     unpinned_dependencies: number | null;
     suspicious_packages: string[] | null;
   };
+  context_integrity: SignalDimension;
+  operational_safety: SignalDimension;
+}
+
+export interface ComputedScores {
+  overall_score: number;
+  severity_counts: Record<string, number>;
+  category_scores: Record<string, number>;
+  signal_floors: Record<string, number>;
+  composition_bonus: boolean;
+  cvss_like: { impact: number; exploitability: number };
 }
 
 const AGENT_CONFIG: Record<string, { displayName: string; color: string }> = {
@@ -88,6 +95,9 @@ export function useAnalysis() {
     behavioral: BehavioralFinding[];
     signals: BehavioralSignals | null;
   }>({ vuln: [], behavioral: [], signals: null });
+  const [computedScores, setComputedScores] = useState<ComputedScores | null>(
+    null,
+  );
   const [sessionId, setSessionId] = useState<string | null>(() => {
     if (typeof window !== "undefined") {
       return sessionStorage.getItem("coderisk_session_id");
@@ -95,7 +105,6 @@ export function useAnalysis() {
     return null;
   });
 
-  // Ref to track the streaming message index
   const streamingIndexRef = useRef<number>(-1);
   const abortControllerRef = useRef<AbortController | null>(null);
   const handleSSEEventRef = useRef<
@@ -125,13 +134,12 @@ export function useAnalysis() {
     ) => {
       setIsAnalyzing(true);
       resetAgentStatuses();
-      setMessages([]); // Clear previous conversation
+      setMessages([]);
       setFindings({ vuln: [], behavioral: [], signals: null });
+      setComputedScores(null);
 
-      // Add user message
       setMessages((prev) => [...prev, { role: "user", content: userMessage }]);
 
-      // Add empty assistant message for streaming
       setMessages((prev) => {
         streamingIndexRef.current = prev.length;
         return [...prev, { role: "assistant", content: "", isStreaming: true }];
@@ -158,15 +166,12 @@ export function useAnalysis() {
           signal: controller.signal,
         });
 
-        // Capture session ID from response header
         const newSessionId = res.headers.get("X-Session-ID");
         if (newSessionId) {
           setSessionId(newSessionId);
-          // Persist in sessionStorage for page reload resilience
           sessionStorage.setItem("coderisk_session_id", newSessionId);
         }
 
-        // Clear session if backend indicates it is invalid
         if (res.status === 401 || res.status === 403 || res.status === 404) {
           setSessionId(null);
           sessionStorage.removeItem("coderisk_session_id");
@@ -201,7 +206,7 @@ export function useAnalysis() {
               } catch {
                 // Partial JSON — wait for more data
               }
-              currentEventType = "message"; // reset after each data line
+              currentEventType = "message";
             }
           }
         }
@@ -230,7 +235,6 @@ export function useAnalysis() {
       } finally {
         clearTimeout(timeoutId);
         abortControllerRef.current = null;
-        // Mark streaming complete
         setMessages((prev) =>
           prev.map((m, i) =>
             i === streamingIndexRef.current ? { ...m, isStreaming: false } : m,
@@ -297,8 +301,13 @@ export function useAnalysis() {
           }
           break;
         }
+        case "scores": {
+          if (data && typeof data === "object") {
+            setComputedScores(data as unknown as ComputedScores);
+          }
+          break;
+        }
         case "done": {
-          // Session ID already captured from response header
           break;
         }
         case "error": {
@@ -321,7 +330,6 @@ export function useAnalysis() {
     [updateAgentStatus],
   );
 
-  // Keep ref in sync with the latest closure
   handleSSEEventRef.current = handleSSEEvent;
 
   const submitCode = useCallback(
@@ -332,7 +340,6 @@ export function useAnalysis() {
       language: string;
       flaggedAsAiGenerated: boolean;
     }) => {
-      // Reset session for new code submission
       setSessionId(null);
       sessionStorage.removeItem("coderisk_session_id");
 
@@ -362,6 +369,7 @@ export function useAnalysis() {
     messages,
     agentStatuses,
     findings,
+    computedScores,
     isAnalyzing,
     sessionId,
     submitCode,

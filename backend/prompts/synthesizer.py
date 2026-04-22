@@ -8,7 +8,6 @@ Model: gpt-4.1-mini, temperature=0.3
 
 from __future__ import annotations
 import json
-from typing import Literal
 
 
 
@@ -36,20 +35,22 @@ On initial analysis completion (first response after scanners run):
 - Lead with a concise summary using the COMPUTED SCORES in the analysis
   state: the overall risk score, severity breakdown by count, and whether
   the Skeptic disputed any findings
+- If composition_bonus is true, note that co-occurring risk types amplified
+  the overall score and name the pair that triggered it
+- If signal_floors are present and nonzero, briefly note which risk domains
+  show elevated signals even without confirmed findings — one sentence only
 - Highlight the 1-2 most significant findings by name and location
-- For each highlighted finding, include its CVSS 3.1 base score and a one-line
-  interpretation of the vector (e.g. "CVSS 9.8 — network-exploitable, no
-  privileges required, full confidentiality and integrity impact")
+- For each highlighted finding, include its CVSS 3.1 base score if present,
+  or describe the behavioral severity in plain language if CVSS is absent
 - Note if behavioral/AI-specific risks were found separately from OWASP findings
 - End with an open invitation: what does the developer want to dig into?
-- Keep this response under 250 words. The developer can ask for detail.
+- Keep this response under 280 words. The developer can ask for detail.
 
 On follow-up questions:
 - Answer the specific question directly first
 - Pull from the relevant finding(s) by ID and location
 - Include CVSS score and vector interpretation when discussing specific findings
-- If the question is about a disputed finding, surface the Skeptic's rationale,
-  including any CVSS metric disputes
+- If the question is about a disputed finding, surface the Skeptic's rationale
 - If remediation was requested and items exist, present them with priority order
 - Match the depth of the question — a brief question gets a focused answer
 
@@ -65,10 +66,19 @@ When referencing CVSS scores:
   low privileges required"
 
 COMPUTED SCORES:
-An overall_score, severity_counts, and cvss_like summary are pre-computed and
-provided in the COMPUTED SCORES section of the analysis state. Use them directly
-as the authoritative numbers in your response. Do not derive, recalculate, sum,
-or re-estimate any numeric score from the individual findings.
+The analysis state contains a COMPUTED SCORES block with these fields:
+- overall_score: the authoritative risk score (0–10). Use this number directly.
+- severity_counts: count of findings per severity level
+- category_scores: per-category scores showing where risk is concentrated
+- signal_floors: categories that carry signal-level risk even without confirmed
+  findings. A nonzero floor means the behavioral agent detected elevated risk
+  patterns in that domain. Mention this briefly if any floors are above 0.5.
+- composition_bonus: true if two dangerous risk types co-occurred and amplified
+  the overall score. Name the co-occurring types if you mention this.
+- cvss_like: aggregate impact and exploitability estimates
+
+Do not derive, recalculate, sum, or re-estimate any numeric score from individual
+findings. The computed scores are authoritative.
 
 DISPUTED FINDINGS:
 Always flag when a finding is disputed. Format: "(disputed by Skeptic — [brief reason])"
@@ -80,6 +90,7 @@ NEVER:
 - Recommend specific third-party security tools or paid services
 - Give generic security advice not grounded in the submitted code
 """
+
 
 def build_synthesis_context(state: dict) -> str:
     sections: list[str] = []
@@ -101,9 +112,10 @@ def build_synthesis_context(state: dict) -> str:
     skeptic_assessment = state.get("skeptic_assessment")
     remediation_items = state.get("remediation_items") or []
     computed_scores = state.get("computed_scores")
+    behavioral_signals = state.get("behavioral_signals")
     errors = state.get("errors") or []
 
-    # Build a CVSS summary for quick reference
+    # CVSS quick-reference for vuln findings
     if vuln_findings:
         cvss_summary = []
         for f in vuln_findings:
@@ -116,17 +128,42 @@ def build_synthesis_context(state: dict) -> str:
         if cvss_summary:
             sections.append("CVSS SUMMARY:\n" + "\n".join(cvss_summary))
 
-    sections.append(f"VULN FINDINGS ({len(vuln_findings)}):\n{json.dumps(vuln_findings, indent=2)}")
-    sections.append(f"BEHAVIORAL FINDINGS ({len(behavioral_findings)}):\n{json.dumps(behavioral_findings, indent=2)}")
+    sections.append(
+        f"VULN FINDINGS ({len(vuln_findings)}):\n{json.dumps(vuln_findings, indent=2)}"
+    )
+    sections.append(
+        f"BEHAVIORAL FINDINGS ({len(behavioral_findings)}):\n{json.dumps(behavioral_findings, indent=2)}"
+    )
 
     if computed_scores is not None:
-        sections.append(f"COMPUTED SCORES:\n{json.dumps(computed_scores, indent=2)}")
+        # Annotate the scores block so the Synthesizer knows what each field means
+        annotated = dict(computed_scores)
+        if annotated.get("composition_bonus"):
+            annotated["composition_bonus_note"] = (
+                "Overall score was multiplied by 1.15x because two dangerous "
+                "risk types co-occurred in confirmed findings."
+            )
+        if annotated.get("signal_floors"):
+            annotated["signal_floors_note"] = (
+                "These categories carry elevated behavioral signal risk even "
+                "without confirmed findings. Values above 0.5 are worth noting."
+            )
+        sections.append(f"COMPUTED SCORES:\n{json.dumps(annotated, indent=2)}")
+
+    if behavioral_signals:
+        sections.append(
+            f"BEHAVIORAL SIGNALS:\n{json.dumps(behavioral_signals, indent=2)}"
+        )
 
     if skeptic_assessment:
-        sections.append(f"SKEPTIC ASSESSMENT:\n{json.dumps(skeptic_assessment, indent=2)}")
+        sections.append(
+            f"SKEPTIC ASSESSMENT:\n{json.dumps(skeptic_assessment, indent=2)}"
+        )
 
     if remediation_items:
-        sections.append(f"REMEDIATION ITEMS ({len(remediation_items)}):\n{json.dumps(remediation_items, indent=2)}")
+        sections.append(
+            f"REMEDIATION ITEMS ({len(remediation_items)}):\n{json.dumps(remediation_items, indent=2)}"
+        )
 
     if errors:
         sections.append(f"AGENT ERRORS:\n{json.dumps(errors, indent=2)}")

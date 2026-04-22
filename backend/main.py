@@ -19,6 +19,10 @@ Streaming:
     event: findings
     data: {"vuln": [...], "behavioral": [...], "signals": {...}}
 
+    event: scores
+    data: {"overall_score": float, "severity_counts": {...}, "category_scores": {...},
+           "signal_floors": {...}, "composition_bonus": bool, "cvss_like": {...}}
+
     event: done
     data: {"session_id": "<id>"}
 
@@ -97,8 +101,10 @@ LANGUAGE_MAP: dict[str, str] = {
 MAX_FILE_LINES = 500
 
 # Node name -> display name. supervisor is internal routing; not surfaced.
+# score_calculator is also internal — not surfaced in status events.
 NODE_DISPLAY: dict[str, str | None] = {
     "supervisor": None,
+    "score_calculator": None,
     "vuln_scanner": "VulnScanner",
     "behavioral_risk": "BehavioralRisk",
     "skeptic": "Skeptic",
@@ -166,6 +172,10 @@ def findings_event(
     if behavioral_signals is not None:
         payload["signals"] = behavioral_signals
     return sse_event("findings", payload)
+
+
+def scores_event(computed_scores: dict) -> str:
+    return sse_event("scores", computed_scores)
 
 
 # ---------------------------------------------------------------------------
@@ -253,6 +263,15 @@ async def stream_graph_response(
                         detail = f"{count} remediation item{'s' if count != 1 else ''}"
 
                 yield status_event(display, "complete", detail)
+
+            # score_calculator: emit scores event (no status event — internal node)
+            elif kind == "on_chain_end" and name == "score_calculator":
+                event_data = event.get("data", {})
+                output = event_data.get("output") if isinstance(event_data, dict) else None
+                if isinstance(output, dict):
+                    computed = output.get("computed_scores")
+                    if isinstance(computed, dict):
+                        yield scores_event(computed)
 
         yield done_event(session_id)
 

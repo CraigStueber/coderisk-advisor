@@ -30,7 +30,10 @@ export default function Home() {
           onFollowUp={analysis.submitFollowUp}
           sessionId={analysis.sessionId}
         />
-        <FindingsPanel findings={analysis.findings} />
+        <FindingsPanel
+          findings={analysis.findings}
+          computedScores={analysis.computedScores}
+        />
       </main>
     </div>
   );

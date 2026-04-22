@@ -232,9 +232,9 @@ def run_score_calculator(state: dict) -> dict:
 
     vuln_findings = state.get("vuln_findings") or []
     behavioral_findings = state.get("behavioral_findings") or []
-    all_findings = vuln_findings + behavioral_findings
+    signals = state.get("behavioral_signals") or {}
 
-    scores = calculate_scores(all_findings)
+    scores = calculate_scores(vuln_findings + behavioral_findings, signals)
     logger.info(
         "[score_calculator] overall=%.1f counts=%s",
         scores["overall_score"],
