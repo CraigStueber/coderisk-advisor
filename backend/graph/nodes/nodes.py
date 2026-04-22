@@ -199,15 +199,15 @@ async def run_skeptic(state: dict) -> dict:
 
         disputed_ids = set(assessment.disputed_finding_ids)
 
+        # Set disputed flag only — confidence penalty is owned by
+        # score_calculator._get_confidence() to avoid double-penalizing.
         updated_vuln = [
-            {**f, "disputed": True, "dispute_rationale": "Flagged by Skeptic",
-             "confidence": f.get("confidence", 0.7) * 0.4}
+            {**f, "disputed": True, "dispute_rationale": "Flagged by Skeptic"}
             if f["id"] in disputed_ids else f
             for f in vuln_findings
         ]
         updated_behavioral = [
-            {**f, "disputed": True, "dispute_rationale": "Flagged by Skeptic",
-             "confidence": f.get("confidence", 0.7) * 0.4}
+            {**f, "disputed": True, "dispute_rationale": "Flagged by Skeptic"}
             if f["id"] in disputed_ids else f
             for f in behavioral_findings
         ]
@@ -244,7 +244,6 @@ def run_score_calculator(state: dict) -> dict:
 
 
 async def run_remediation(state: dict) -> dict:
-    from graph.supervisor import MODELS
     from prompts.remediation import REMEDIATION_SYSTEM_PROMPT
 
     session_id = state.get("session_id", "")
@@ -262,8 +261,18 @@ async def run_remediation(state: dict) -> dict:
     messages_history = state.get("messages") or []
     last_message = messages_history[-1].content if messages_history else ""
 
+    logger.info(
+        "[remediation] confirmed findings count=%d",
+        len(confirmed),
+    )
+
     try:
-        model = MODELS[AgentRole.REMEDIATION]
+        from langchain_openai import ChatOpenAI
+        model = ChatOpenAI(
+            model="gpt-4.1",
+            temperature=0.1,
+            streaming=True,
+        )
         messages = [
             SystemMessage(content=REMEDIATION_SYSTEM_PROMPT),
             HumanMessage(

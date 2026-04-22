@@ -25,7 +25,9 @@ export function CodePanel({ onSubmit, isAnalyzing }: CodePanelProps) {
   const [flaggedAsAiGenerated, setFlaggedAsAiGenerated] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [showExamples, setShowExamples] = useState(false);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const lineNumbersRef = useRef<HTMLDivElement>(null);
 
   const ACCEPTED_EXTENSIONS = [".py", ".js", ".ts", ".jsx", ".tsx"];
 
@@ -91,6 +93,13 @@ export function CodePanel({ onSubmit, isAnalyzing }: CodePanelProps) {
     });
   };
 
+  // Keep line numbers in sync with textarea scroll position
+  const handleEditorScroll = (e: React.UIEvent<HTMLTextAreaElement>) => {
+    if (lineNumbersRef.current) {
+      lineNumbersRef.current.scrollTop = e.currentTarget.scrollTop;
+    }
+  };
+
   const lineCount = code.split("\n").length;
 
   return (
@@ -134,7 +143,7 @@ export function CodePanel({ onSubmit, isAnalyzing }: CodePanelProps) {
           onDragLeave={() => setIsDragging(false)}
           onDrop={handleDrop}
         >
-          <div className={styles.lineNumbers}>
+          <div ref={lineNumbersRef} className={styles.lineNumbers}>
             {Array.from({ length: Math.max(lineCount, 20) }, (_, i) => (
               <span key={i + 1}>{i + 1}</span>
             ))}
@@ -143,6 +152,7 @@ export function CodePanel({ onSubmit, isAnalyzing }: CodePanelProps) {
             className={styles.editor}
             value={code}
             onChange={(e) => setCode(e.target.value)}
+            onScroll={handleEditorScroll}
             placeholder="Paste code here, upload a file, or try an example..."
             spellCheck={false}
             disabled={isAnalyzing}

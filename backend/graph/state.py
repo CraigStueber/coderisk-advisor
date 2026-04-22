@@ -105,10 +105,22 @@ class DependencyVolatilitySignal(BaseModel):
     suspicious_packages: Optional[list[str]] = None
 
 
+class ContextIntegritySignal(BaseModel):
+    level: SignalLevel
+    rationale: str
+
+
+class OperationalSafetySignal(BaseModel):
+    level: SignalLevel
+    rationale: str
+
+
 class BehavioralSignals(BaseModel):
     hallucination_markers: HallucinationMarkersSignal
     nondeterminism_sensitivity: NondeterminismSensitivitySignal
     dependency_volatility: DependencyVolatilitySignal
+    context_integrity: ContextIntegritySignal
+    operational_safety: OperationalSafetySignal
 
 
 class CodeSubmission(BaseModel):

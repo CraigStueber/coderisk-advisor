@@ -60,21 +60,31 @@ _ZERO_COUNTS: dict[str, int] = {
 # Field extractors with safe fallbacks
 # ---------------------------------------------------------------------------
 
+def _normalize_severity(finding: dict) -> str:
+    """
+    Return a clean severity string for table lookups.
+
+    Pydantic enum repr leaks into state as "severity.medium" rather than
+    "medium" when findings are reconstructed via dict comprehension in the
+    Skeptic node. Split on "." and take the last segment to handle both.
+    """
+    raw = str(finding.get("severity", "")).lower()
+    return raw.split(".")[-1]
+
+
 def _get_impact(finding: dict) -> float:
-    """Return impact (0–10). Prefers explicit 'impact' field; falls back to severity."""
+    """Explicit 'impact' field takes priority; falls back to severity map."""
     raw = finding.get("impact")
     if raw is not None:
         try:
             return float(raw)
         except (ValueError, TypeError):
             pass
-    return _SEVERITY_IMPACT.get(str(finding.get("severity", "")).lower(), 0.0)
+    return _SEVERITY_IMPACT.get(_normalize_severity(finding), 0.0)
 
 
 def _get_exploitability(finding: dict) -> float:
-    """Return exploitability (0–10).
-    Priority: explicit 'exploitability' field → cvss_score → severity map.
-    """
+    """Priority: explicit 'exploitability' → cvss_score → severity map."""
     raw = finding.get("exploitability")
     if raw is not None:
         try:
@@ -87,7 +97,7 @@ def _get_exploitability(finding: dict) -> float:
             return float(cvss)
         except (ValueError, TypeError):
             pass
-    return _SEVERITY_EXPLOITABILITY.get(str(finding.get("severity", "")).lower(), 0.0)
+    return _SEVERITY_EXPLOITABILITY.get(_normalize_severity(finding), 0.0)
 
 
 def _get_confidence(finding: dict) -> float:
@@ -147,7 +157,7 @@ def calculate_scores(findings: list[dict]) -> dict:
     max_exploitability = 0.0
 
     for finding in findings:
-        severity = str(finding.get("severity", "info")).lower()
+        severity = _normalize_severity(finding)
         if severity in severity_counts:
             severity_counts[severity] += 1
 
